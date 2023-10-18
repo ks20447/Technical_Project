@@ -23,43 +23,54 @@ from scipy.stats import bernoulli
 
 
 # Simulation Parameters
-NUM_PARTICLES = 20
+NUM_PARTICLES = 50
 SPEED = 0.1
+RADIUS = 0.2
 TUMBLE_RATE = 20
-WIDTH, HEIGHT = 5, 5
-SIM_TIM = 200
+WIDTH, HEIGHT = 10, 10
+SIM_TIM = 500
 
 
 class Particle():
     
-    def __init__(self) -> None:
+    def __init__(self, set_start=False) -> None:
         # Initial conditions
-        self.start_x = rn.uniform(-HEIGHT, HEIGHT)
-        self.start_y = rn.uniform(-HEIGHT, HEIGHT)
-        self.start_theta = rn.uniform(-2 * math.pi, 2 * math.pi)
+        if set_start:
+            self.start_x = set_start[0]
+            self.start_y = set_start[1]
+            self.start_theta = set_start[2]
+        else:
+            self.start_x = rn.uniform(-HEIGHT, HEIGHT)
+            self.start_y = rn.uniform(-HEIGHT, HEIGHT)
+            self.start_theta = rn.uniform(-2 * math.pi, 2 * math.pi)
         self.speed = SPEED
+        self.radius = RADIUS
         self.tumble_rate = TUMBLE_RATE
         # Current states
         self.x = self.start_x
         self.y = self.start_y
         self.theta = self.start_theta
         self.run_num = 0
-        # Distance array
+        # Distance array initialization
         self.dist = np.empty(SIM_TIM + 1)
         
         
         
-    def run(self, time_step):
+    def run(self, time_step, particles):
         # Update position
         self.x += self.speed * math.cos(self.theta)
         self.y += self.speed * math.sin(self.theta)
+        # Check for collision
+        for particle in particles:
+            if particle != self and self.distance_from_neighbors(particle) < self.radius:
+                self.collision(particle)
         # Update run number for tumble probability
         self.run_num += 1
         # Uncomment to make semi-infinite domain
-        # if self.x > WIDTH or self.x < -WIDTH:
-        #     self.x *= -1
-        # if self.y > HEIGHT or self.y < -HEIGHT:
-        #     self.y *= -1
+        if self.x > WIDTH or self.x < -WIDTH:
+            self.x *= -1
+        if self.y > HEIGHT or self.y < -HEIGHT:
+            self.y *= -1
         # Calculate distance from initial conditions
         self.dist[time_step] = self.distance_from_start()
         
@@ -69,16 +80,30 @@ class Particle():
         if bernoulli.rvs(self.tumble_probability()):
             self.theta += rn.uniform(0, 2 * math.pi)
             self.run_num = 0
-        
+            
+            
+    def collision(self, particle):
+        # Check for collisions
+        self.x -= self.speed * math.cos(self.theta)
+        self.y -= self.speed * math.sin(self.theta)
+        self.theta -= math.pi
+        particle.x -= particle.speed * math.cos(particle.theta)
+        particle.y -= particle.speed * math.sin(particle.theta)
+        particle.theta -= math.pi
+               
         
     def distance_from_start(self):
         return math.sqrt((self.x - self.start_x) ** 2 + (self.y - self.start_y) ** 2)
+    
+    def distance_from_neighbors(self, neighbor):
+        return math.sqrt((self.x - neighbor.x) ** 2 + (self.y - neighbor.y) ** 2)
     
     def tumble_probability(self):
         return 1 - math.exp(-(1/self.tumble_rate)*self.run_num)
         
         
 particles = [Particle() for _ in range(NUM_PARTICLES)]
+# particles = [Particle(set_start=[-1, -1, math.pi/4]), Particle(set_start=[-1, 1, -math.pi/4])]
 fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
 # Particle Simulation Plot
@@ -88,7 +113,9 @@ axs[0].grid(True)
 axs[0].set_title("Run and Tumble Simulation")
 axs[0].set_xlabel("x (cm)")
 axs[0].set_ylabel("y (cm)")
-scatter = axs[0].scatter([particle.x for particle in particles], [particle.y for particle in particles])
+scatter = axs[0].scatter([particle.x for particle in particles], [particle.y for particle in particles],
+                         s=[particle.radius*500 for particle in particles]
+                         )
 
 # Average Distance from Start Plot
 axs[1].set_xlim(0, SIM_TIM)
@@ -103,7 +130,7 @@ line, = axs[1].plot(0, 0)
 def update(frame):
     
     for particle in particles:
-        particle.run(frame)
+        particle.run(frame, particles)
         particle.tumble()
  
     scatter.set_offsets([(particle.x, particle.y) for particle in particles])
