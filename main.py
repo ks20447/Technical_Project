@@ -23,11 +23,12 @@ from scipy.stats import bernoulli
 
 
 # Simulation Parameters
-NUM_PARTICLES = 50
+NUM_PARTICLES = 20
 SPEED = 0.1
 RADIUS = 0.2
+DETECT_RADIUS = 0.5
 TUMBLE_RATE = 20
-WIDTH, HEIGHT = 10, 10
+WIDTH, HEIGHT = 5, 5
 SIM_TIM = 500
 
 
@@ -45,6 +46,7 @@ class Particle():
             self.start_theta = rn.uniform(-2 * math.pi, 2 * math.pi)
         self.speed = SPEED
         self.radius = RADIUS
+        self.detect_radius = DETECT_RADIUS
         self.tumble_rate = TUMBLE_RATE
         # Current states
         self.x = self.start_x
@@ -62,7 +64,7 @@ class Particle():
         self.y += self.speed * math.sin(self.theta)
         # Check for collision
         for particle in particles:
-            if particle != self and self.distance_from_neighbors(particle) < self.radius:
+            if particle != self and self.distance_from_neighbor(particle) < self.radius:
                 self.collision(particle)
         # Update run number for tumble probability
         self.run_num += 1
@@ -90,12 +92,28 @@ class Particle():
         particle.x -= particle.speed * math.cos(particle.theta)
         particle.y -= particle.speed * math.sin(particle.theta)
         particle.theta -= math.pi
+        
+        
+    def anti_align(self, particles):
+        avg_direction = [0, 0]
+        count = 0
+        for particle in particles:
+            if particle != self and self.distance_from_neighbor(particle) < self.detect_radius:
+                avg_direction[0] += math.cos(particle.theta)
+                avg_direction[1] += math.sin(particle.theta)
+                count += 1
+        if count > 0:
+            avg_direction[0] /= count
+            avg_direction[1] /= count
+            avg_theta = math.atan2(avg_direction[1], avg_direction[0])
+            self.theta -= (avg_theta - self.theta)
+        self.run_num = 0
                
         
     def distance_from_start(self):
         return math.sqrt((self.x - self.start_x) ** 2 + (self.y - self.start_y) ** 2)
     
-    def distance_from_neighbors(self, neighbor):
+    def distance_from_neighbor(self, neighbor):
         return math.sqrt((self.x - neighbor.x) ** 2 + (self.y - neighbor.y) ** 2)
     
     def tumble_probability(self):
@@ -110,7 +128,7 @@ fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 axs[0].set_xlim(-WIDTH, WIDTH)
 axs[0].set_ylim(-HEIGHT, HEIGHT)
 axs[0].grid(True)
-axs[0].set_title("Run and Tumble Simulation")
+axs[0].set_title("Run and Tumble Simulation - Collision + Anti Align")
 axs[0].set_xlabel("x (cm)")
 axs[0].set_ylabel("y (cm)")
 scatter = axs[0].scatter([particle.x for particle in particles], [particle.y for particle in particles],
@@ -130,6 +148,7 @@ line, = axs[1].plot(0, 0)
 def update(frame):
     
     for particle in particles:
+        particle.anti_align(particles)
         particle.run(frame, particles)
         particle.tumble()
  
@@ -147,7 +166,7 @@ def update(frame):
 ani = FuncAnimation(fig, update, frames=range(SIM_TIM), blit=True, interval=50, repeat=False)
 
 # Save Animation
-# ani.save("run_and_tumble.gif")
+ani.save("run_and_tumble_anti_align.gif")
 
 # Show the animation
 plt.show()
