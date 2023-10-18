@@ -19,45 +19,63 @@ import random as rn
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from scipy.stats import bernoulli
 
 
 # Simulation Parameters
 NUM_PARTICLES = 20
 SPEED = 0.1
+TUMBLE_RATE = 20
 WIDTH, HEIGHT = 5, 5
-TUMBLE_PROBABILITY = [0.30, 0.70]
-SIM_TIM = 500
+SIM_TIM = 200
 
 
 class Particle():
     
     def __init__(self) -> None:
-        self.x = rn.uniform(-WIDTH, WIDTH)
-        self.y = rn.uniform(-HEIGHT, HEIGHT)
-        self.start_x = self.x
-        self.start_y = self.y
-        self.dist = np.empty(SIM_TIM + 1)
-        self.theta = rn.uniform(0, 2 * math.pi)
+        # Initial conditions
+        self.start_x = rn.uniform(-HEIGHT, HEIGHT)
+        self.start_y = rn.uniform(-HEIGHT, HEIGHT)
+        self.start_theta = rn.uniform(-2 * math.pi, 2 * math.pi)
         self.speed = SPEED
+        self.tumble_rate = TUMBLE_RATE
+        # Current states
+        self.x = self.start_x
+        self.y = self.start_y
+        self.theta = self.start_theta
+        self.run_num = 0
+        # Distance array
+        self.dist = np.empty(SIM_TIM + 1)
+        
         
         
     def run(self, time_step):
+        # Update position
         self.x += self.speed * math.cos(self.theta)
         self.y += self.speed * math.sin(self.theta)
+        # Update run number for tumble probability
+        self.run_num += 1
         # Uncomment to make semi-infinite domain
         # if self.x > WIDTH or self.x < -WIDTH:
         #     self.x *= -1
         # if self.y > HEIGHT or self.y < -HEIGHT:
         #     self.y *= -1
+        # Calculate distance from initial conditions
         self.dist[time_step] = self.distance_from_start()
         
 
     def tumble(self):
-        self.theta += rn.uniform(0, 2 * math.pi)
+        # Perform tumble with probability 1 - exp(-lambda*x)
+        if bernoulli.rvs(self.tumble_probability()):
+            self.theta += rn.uniform(0, 2 * math.pi)
+            self.run_num = 0
         
         
     def distance_from_start(self):
         return math.sqrt((self.x - self.start_x) ** 2 + (self.y - self.start_y) ** 2)
+    
+    def tumble_probability(self):
+        return 1 - math.exp(-(1/self.tumble_rate)*self.run_num)
         
         
 particles = [Particle() for _ in range(NUM_PARTICLES)]
@@ -86,10 +104,8 @@ def update(frame):
     
     for particle in particles:
         particle.run(frame)
-        tumble_choice = rn.choices([True, False], weights=TUMBLE_PROBABILITY, k=1)[0]
-        if tumble_choice:
-            particle.tumble()     
-
+        particle.tumble()
+ 
     scatter.set_offsets([(particle.x, particle.y) for particle in particles])
     
     time = np.linspace(0, SIM_TIM, SIM_TIM + 1)
