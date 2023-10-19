@@ -8,6 +8,8 @@ project will design and develop a robot swarm whose agents preferentially anti-a
 classical models of aligning particles such as the Viczek model of collective motion), comparing the
 results to theoretical models developed by collaborators at Brandeis University.
 
+Simulation of particles performing run-and-tumble motion in a semi-infinite domain. 
+
 Author - Adam Morris
 Created - 05/10/2023
 
@@ -23,27 +25,35 @@ from scipy.stats import bernoulli
 
 
 # Simulation Parameters
-NUM_PARTICLES = 20
-SPEED = 0.1
-RADIUS = 0.2
-DETECT_RADIUS = 0.5
+NUM_PARTICLES = 100
+SPEED = 1
+RADIUS = 0.1
+DETECT_RADIUS = 1
 TUMBLE_RATE = 20
-WIDTH, HEIGHT = 5, 5
+WIDTH, HEIGHT = 10, 10
 SIM_TIM = 500
 
 
 class Particle():
+    """Particle object. Can run, tumble, collide and anti-align with other particles.
+    """
     
     def __init__(self, set_start=False) -> None:
+        """Initializes particle object with simulation parameters.
+
+        Args:
+            set_start (bool, optional): Optional parameter to manually set the starting conditions of a particle. Defaults to False. 
+        """
         # Initial conditions
         if set_start:
             self.start_x = set_start[0]
             self.start_y = set_start[1]
             self.start_theta = set_start[2]
         else:
-            self.start_x = rn.uniform(-HEIGHT, HEIGHT)
-            self.start_y = rn.uniform(-HEIGHT, HEIGHT)
+            self.start_x = rn.uniform(-HEIGHT + RADIUS, HEIGHT - RADIUS)
+            self.start_y = rn.uniform(-HEIGHT + RADIUS, HEIGHT - RADIUS)
             self.start_theta = rn.uniform(-2 * math.pi, 2 * math.pi)
+        # Particle parameters
         self.speed = SPEED
         self.radius = RADIUS
         self.detect_radius = DETECT_RADIUS
@@ -62,18 +72,27 @@ class Particle():
         # Update position
         self.x += self.speed * math.cos(self.theta)
         self.y += self.speed * math.sin(self.theta)
-        # Check for collision
+        # Check for collisions
         for particle in particles:
             if particle != self and self.distance_from_neighbor(particle) < self.radius:
                 self.collision(particle)
         # Update run number for tumble probability
         self.run_num += 1
-        # Uncomment to make semi-infinite domain
-        if self.x > WIDTH or self.x < -WIDTH:
-            self.x *= -1
-        if self.y > HEIGHT or self.y < -HEIGHT:
-            self.y *= -1
-        # Calculate distance from initial conditions
+        # Creates semi-infinite domain
+        # if self.x > WIDTH or self.x < -WIDTH:
+        #     self.x *= -1
+        # if self.y > HEIGHT or self.y < -HEIGHT:
+        #     self.y *= -1
+        # Creates bounded domain
+        if self.x + self.radius > WIDTH or self.x - self.radius < - WIDTH:
+            self.x -= self.speed * math.cos(self.theta)
+            self.y -= self.speed * math.sin(self.theta)
+            self.theta -= math.pi
+        if self.y + self.radius > HEIGHT or self.y - self.radius < - HEIGHT:
+            self.x -= self.speed * math.cos(self.theta)
+            self.y -= self.speed * math.sin(self.theta)
+            self.theta -= math.pi
+        # Calculates distance from initial conditions
         self.dist[time_step] = self.distance_from_start()
         
 
@@ -85,7 +104,7 @@ class Particle():
             
             
     def collision(self, particle):
-        # Check for collisions
+        # Update trajectories on collision
         self.x -= self.speed * math.cos(self.theta)
         self.y -= self.speed * math.sin(self.theta)
         self.theta -= math.pi
@@ -95,6 +114,7 @@ class Particle():
         
         
     def anti_align(self, particles):
+        # Update particle direction based on neighboring particles
         avg_direction = [0, 0]
         count = 0
         for particle in particles:
@@ -166,7 +186,7 @@ def update(frame):
 ani = FuncAnimation(fig, update, frames=range(SIM_TIM), blit=True, interval=50, repeat=False)
 
 # Save Animation
-ani.save("run_and_tumble_anti_align.gif")
+# ani.save("run_and_tumble_anti_align.gif")
 
 # Show the animation
 plt.show()
