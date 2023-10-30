@@ -39,13 +39,14 @@ class Particle():
         self.tumble_rate = sim_params["TUMBLE_RATE"]
         self.domain_width = sim_params["WIDTH"]
         self.domain_height = sim_params["HEIGHT"]
+        self.spawn_factor = sim_params["SPAWN"]
 
         # Initial conditions
         if set_start:
             self.start_x, self.start_y, self.start_theta = set_start
         else:
-            self.start_x = rn.uniform(-self.domain_width / 2, self.domain_width / 2)
-            self.start_y = rn.uniform(-self.domain_height / 2, self.domain_height / 2)
+            self.start_x = rn.uniform(-self.domain_width * self.spawn_factor, self.domain_width * self.spawn_factor)
+            self.start_y = rn.uniform(-self.domain_height * self.spawn_factor, self.domain_height * self.spawn_factor)
             self.start_theta = rn.uniform(-2 * math.pi, 2 * math.pi)
         
         # Current states
