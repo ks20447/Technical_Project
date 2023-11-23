@@ -18,7 +18,6 @@ Created - 05/10/2023
 
 import math
 import random as rn
-import numpy as np
 from scipy.stats import bernoulli
 
 
@@ -39,14 +38,13 @@ class Particle():
         self.tumble_rate = sim_params["TUMBLE_RATE"]
         self.domain_width = sim_params["WIDTH"]
         self.domain_height = sim_params["HEIGHT"]
-        self.spawn_factor = sim_params["SPAWN"]
 
         # Initial conditions
         if set_start:
             self.start_x, self.start_y, self.start_theta = set_start
         else:
-            self.start_x = rn.uniform(-self.domain_width * self.spawn_factor, self.domain_width * self.spawn_factor)
-            self.start_y = rn.uniform(-self.domain_height * self.spawn_factor, self.domain_height * self.spawn_factor)
+            self.start_x = rn.uniform(0, self.domain_width)
+            self.start_y = rn.uniform(0, self.domain_height)
             self.start_theta = rn.uniform(-2 * math.pi, 2 * math.pi)
         
         # Current states
@@ -54,9 +52,7 @@ class Particle():
         self.y = self.start_y
         self.theta = self.start_theta
         self.run_num = 0
-        
-        # Distance array initialization
-        self.dist = np.empty(sim_params["SIM_TIME"] + 1)
+        self.tick = 0
         
         
     def run(self, time_step, particles):
@@ -69,22 +65,9 @@ class Particle():
                 self.collision(particle)
         # Update run number for tumble probability
         self.run_num += 1
-        # Creates semi-infinite domain
-        if self.x > self.domain_width or self.x < -self.domain_width:
-            self.x *= -1
-        if self.y > self.domain_height or self.y < -self.domain_height:
-            self.y *= -1
-        # # Creates bounded domain
-        # if self.x + self.radius > self.domain_width or self.x - self.radius < - self.domain_width:
-        #     self.x -= self.speed * math.cos(self.theta)
-        #     self.y -= self.speed * math.sin(self.theta)
-        #     self.theta -= math.pi
-        # if self.y + self.radius > self.domain_height or self.y - self.radius < - self.domain_height:
-        #     self.x -= self.speed * math.cos(self.theta)
-        #     self.y -= self.speed * math.sin(self.theta)
-        #     self.theta -= math.pi
-        # Calculates distance from initial conditions
-        self.dist[time_step] = self.distance_from_start()
+        # Periodic domain
+        self.x %= self.domain_width
+        self.y %= self.domain_height
         
 
     def tumble(self):
@@ -96,28 +79,36 @@ class Particle():
             
     def collision(self, particle):
         # Update trajectories on collision
-        self.x -= self.speed * math.cos(self.theta)
-        self.y -= self.speed * math.sin(self.theta)
-        self.theta -= math.pi
-        particle.x -= particle.speed * math.cos(particle.theta)
-        particle.y -= particle.speed * math.sin(particle.theta)
-        particle.theta -= math.pi
+        # self.x -= self.speed * math.cos(self.theta)
+        # self.y -= self.speed * math.sin(self.theta)
+        # self.theta -= math.pi
+        # particle.x -= particle.speed * math.cos(particle.theta)
+        # particle.y -= particle.speed * math.sin(particle.theta)
+        # particle.theta -= math.pi
+        # self.theta += math.pi
+        # particle.theta += math.pi
+        return 0
         
         
     def anti_align(self, particles):
         # Update particle direction based on neighboring particles
-        avg_direction = [0, 0]
-        count = 0
-        for particle in particles:
-            if self.distance_from_neighbor(particle) < self.detect_radius:
-                avg_direction[0] += math.cos(particle.theta)
-                avg_direction[1] += math.sin(particle.theta)
-                count += 1
-        if count > 1:
-            avg_direction[0] /= count
-            avg_direction[1] /= count
-            avg_theta = -math.atan2(avg_direction[1], avg_direction[0])
-            self.theta -= (avg_theta - self.theta)
+        if self.tick == 0:
+            self.tick = 1
+            avg_direction = [0, 0]
+            count = 0
+            for particle in particles:
+                if self.distance_from_neighbor(particle) < self.detect_radius:
+                    avg_direction[0] += math.cos(particle.theta)
+                    avg_direction[1] += math.sin(particle.theta)
+                    count += 1
+            if count > 1:
+                avg_direction[0] /= count
+                avg_direction[1] /= count
+                avg_theta = math.atan2(avg_direction[1], avg_direction[0])
+                self.theta += (avg_theta - self.theta)
+        else:
+            self.tick -= 1
+        # self.tumble()
                
         
     def distance_from_start(self):

@@ -1,4 +1,5 @@
 import numpy as np
+import random as rn
 import math
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -7,25 +8,24 @@ from particles import Particle
 # Simulation Parameters
 SIM_PARAMS = {
     "NUM_PARTICLES" : 10,
-    "SPEED" : 0.5,
-    "SPAWN": 1/3,
-    "RADIUS" : 0.5,
-    "DETECT_RADIUS" : 1,
+    "SPEED" : 0.3,
+    "RADIUS" : 0.3,
+    "DETECT_RADIUS" : 2.5,
     "TUMBLE_RATE" : 20,
-    "WIDTH" : 15,
-    "HEIGHT" : 15,
-    "SIM_TIME" : 500
+    "WIDTH" : 20,
+    "HEIGHT" : 20,
+    "SIM_TIME" : 300
 }
 
 def scatter_plot(ax, make_path=False):
     # Particle Simulation Plot
-    ax.set_xlim(-SIM_PARAMS["WIDTH"], SIM_PARAMS["WIDTH"])
-    ax.set_ylim(-SIM_PARAMS["HEIGHT"], SIM_PARAMS["HEIGHT"])
+    ax.set_xlim(0, SIM_PARAMS["WIDTH"])
+    ax.set_ylim(0, SIM_PARAMS["HEIGHT"])
     ax.grid(True)
     ax.set_title("Run and Tumble Simulation - Anti-Align")
     ax.set_xlabel("x (cm)")
     ax.set_ylabel("y (cm)")
-    scatter = ax.scatter([], [], s=50)
+    scatter = ax.scatter([], [], s=200)
     
     if make_path:
         path, = ax.plot([], [])
@@ -37,7 +37,7 @@ def scatter_plot(ax, make_path=False):
 def mean_distance_plot(ax):
     # Average Distance from Start Plot
     ax.set_xlim(0, SIM_PARAMS["SIM_TIME"])
-    ax.set_ylim(0, math.sqrt((2*SIM_PARAMS["WIDTH"])**2 + (2*SIM_PARAMS["HEIGHT"])**2))
+    ax.set_ylim(0, SIM_PARAMS["WIDTH"])
     ax.grid(True)
     ax.set_title("Particle Distance from Start")
     ax.set_xlabel("Time (frames)")
@@ -83,14 +83,17 @@ def scatter_update(frame):
     line_align.set_data(time, align_corr)
     
     for particle in particles:
+        # if frame > SIM_PARAMS["SIM_TIME"]/6:
         particle.anti_align(particles)
         particle.run(frame, particles)
-        particle.tumble()
+        # if frame > SIM_PARAMS["SIM_TIME"]/4 and frame < SIM_PARAMS["SIM_TIME"]/2:
+        #     particle.tumble()
     
     return scatter, line_mean, line_align
 
-
-particles = [Particle(SIM_PARAMS) for _ in range(SIM_PARAMS["NUM_PARTICLES"])]
+# set_start=[rn.uniform(0, SIM_PARAMS["WIDTH"]), rn.uniform(0, SIM_PARAMS["HEIGHT"]), math.pi/2]
+particles = [Particle(SIM_PARAMS, set_start=[rn.uniform(0, SIM_PARAMS["WIDTH"]), rn.uniform(0, SIM_PARAMS["HEIGHT"]), math.pi/2])
+            for _ in range(SIM_PARAMS["NUM_PARTICLES"])]
 # particles = [Particle(SIM_PARAMS, set_start=[0, 0, 0])]
 
 time = []
