@@ -1,16 +1,14 @@
 import pygame 
-import random
 import math
 import sys
 import pandas as pd
-from scipy.stats import bernoulli
 from kilobots import *
 
 
-# Simulation time (=math.inf for continuous running but no data collection)
-SIM_TIME = math.inf
+# Simulation time (ms) (=math.inf for continuous running but no data collection)
+SIM_TIME = 20000
 # Number of Kilobots to begin simulation with
-NUM_KILOBOTS = 5
+NUM_KILOBOTS = 50
     
     
 def handle_inputs(event):
@@ -24,8 +22,6 @@ def handle_inputs(event):
         detecting = not detecting
     if event.key == pygame.K_r:
         radii = not radii  
-    if event.key == pygame.K_a:
-        ALIGNMENT *= -1
  
  
 if __name__ == "__main__": 
@@ -43,7 +39,7 @@ if __name__ == "__main__":
     simulating = True
     paused = False
     tumbling = True
-    detecting = False
+    detecting = True
     radii = False
 
     while len(kilobots) < NUM_KILOBOTS:
@@ -54,7 +50,7 @@ if __name__ == "__main__":
             kilobots.append(kilobot)
     
     font = pygame.font.Font(None, 30)
-    text = "SPACE : Pause  A : Alignment  T : Tumble  D : Detection  R : Radii  Click : Add Kilobot"
+    text = "SPACE : Pause  T : Tumble  D : Detection  R : Radii  Click : Add Kilobot"
 
     while simulating:
         
@@ -88,16 +84,20 @@ if __name__ == "__main__":
             for kilobot_id, kilobot in enumerate(kilobots):
                 
                 if not paused:
+                    
                     if time_step % milliseconds_to_frames(100) == 0 and SIM_TIME != math.inf:
                         # Record kilobot information
-                        kilobot_info = {"TimeStep": time_step, "KilobotID": kilobot_id, "X": int(kilobot.x), "Y": int(kilobot.y), "Theta": round(kilobot.theta, 2)}
-                        kilobot_df = pd.concat([kilobot_df, pd.DataFrame([kilobot_info])], ignore_index=True)
+                        kilobot_info = {"TimeStep": time_step, "KilobotID": kilobot_id, 
+                                        "X": int(kilobot.x), "Y": int(kilobot.y),
+                                        "Theta": round(kilobot.theta, 2), "Neighbors": int(kilobot.neighbor_count)}
+                        kilobot_df = pd.concat([kilobot_df, pd.DataFrame([kilobot_info])], ignore_index=True)                     
                     
                     if detecting:
-                        kilobot.neighbor_detect(kilobots)
+                        kilobot.neighbor_detect(kilobots)  
+                        
                     kilobot.events()
                     if tumbling:
-                        kilobot.tumble()
+                        kilobot.tumble()           
                 
                 pygame.draw.circle(screen, kilobot.status, (kilobot.x, kilobot.y), RADIUS)
                 if radii:

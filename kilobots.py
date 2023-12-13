@@ -3,7 +3,6 @@ import math
 from scipy.stats import bernoulli
 
 
-
 WIDTH, HEIGHT = 1000, 800       # Domain size (pixels correspond to mm)
 FPS = 60                        # Simulation FPS
 BLACK = (0, 0, 0)            
@@ -51,6 +50,7 @@ class Kilobot():
         self.step_since_adjust = 0
         self.step_since_colliding = 0
         self.adjust_tick = 0
+        self.neighbor_count = 0
         self.tumbling = False
         self.adjusting = False
         self.colliding = False
@@ -88,11 +88,12 @@ class Kilobot():
             kilobots (list): List of all other Kilobots
         """
         avg_theta = 0
-        count = 0
+        count = 1
         if self.adjust_tick == 0:
             self.adjust_tick = milliseconds_to_frames(ADJUST_TICK)
+            avg_theta = self.theta
             for kilobot in kilobots:
-                if self.distance_from_neighbor(kilobot) < DETECT_RADIUS:
+                if kilobot != self and self.distance_from_neighbor(kilobot) < DETECT_RADIUS:
                     avg_theta += kilobot.theta
                     count += 1
             if count > 1:
@@ -102,9 +103,11 @@ class Kilobot():
                 self.adjusting = True
                 self.step_since_adjust = 0
                 self.detection = BLUE
+                self.neighbor_count = count - 1 
             else:
                 self.status = STATES["RUNNING"]
                 self.detection = BLACK
+                self.neighbor_count = 0
         else:      
             self.adjust_tick -= 1
             
