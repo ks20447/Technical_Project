@@ -3,7 +3,7 @@ import math
 from scipy.stats import bernoulli
 
 
-WIDTH, HEIGHT = 1000, 800       # Domain size (pixels correspond to mm)
+WIDTH, HEIGHT = 1000, 1000       # Domain size (pixels correspond to mm)
 FPS = 60                        # Simulation FPS
 BLACK = (0, 0, 0)            
 RED = (255, 0, 0)           
@@ -12,13 +12,13 @@ BLUE = (0, 0, 255)
 ORANGE = (255, 165, 0)      
 GREY = (128, 128, 128)      
 WHITE = (255, 255, 255)     
-SCALE = 3                       # Scales the Kilobots to user preference (1 represents real size compared to domain)
-SPEED = 10 / SCALE          
+SCALE = 2.5                     # Scales the Kilobots to user preference (1 represents real size compared to domain)
+SPEED = 1 / SCALE          
 RADIUS = 30 / SCALE         
 DETECT_RADIUS = 500 / SCALE     # Kilobot neighborhood detection radius
 TUMBLE_RATE = 5000              # Tumble probability rate 
 TUMBLE_DELAY = 500              # Time (ms) to complete tumbling action
-ADJUST_DELAY = 250              # Time (ms) to complete adjusting action
+ADJUST_DELAY = 500              # Time (ms) to complete adjusting action
 ADJUST_TICK = 1000              # Time (ms) between neighbor detection
 ALIGNMENT = -1                  # 1: align, -1: anti-align
 STATES = {

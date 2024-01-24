@@ -2,7 +2,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-from pygamesim import *
+from multiprocessing import Process
+from kilobots import *
+from pygamesim import NUM_KILOBOTS
 
 
 plt.rcParams.update({"text.usetex": True, 'font.size': 14})
@@ -67,7 +69,7 @@ def orient_order_timeseries():
     
     mean_order = np.mean(orientational_order)
     
-    # Plot the time series of alignment correlation
+    # Plot the time series of orientational order
     plt.figure(figsize=(12, 6))
     time = frames_to_milliseconds(np.array(orientational_order.index, dtype=int))
     plt.plot(time, orientational_order, marker='o', linestyle='-', label="Orientational Order")
@@ -100,11 +102,33 @@ def theta_histogram():
     ax.legend(loc='upper right', bbox_to_anchor=(1.2, 1))
     
     
+def kilobot_neighbor_timeseries(num_bots):
+    
+    plt.figure(figsize=(12, 6))
+    
+    id_array = [random.randint(0, NUM_KILOBOTS) for _ in range(num_bots)]
+    
+    for bot_id in id_array:
+        bot_neighbors = kilobot_df.loc[kilobot_df['KilobotID'] == bot_id, 'Neighbors']
+        
+        # Plot the time series of alignment correlation
+        time = frames_to_milliseconds(np.array(bot_neighbors.index, dtype=int))
+        plt.plot(time, bot_neighbors, marker='o', linestyle='-', label=f"ID: {bot_id}")
+
+    plt.title("Time Series of Kilobot Neighbors")
+    plt.xlabel("Time (ms)")
+    plt.ylabel("Count")
+    plt.grid(True)
+    plt.legend()
+    
+    
+    
 # Read the CSV file into a DataFrame
-csv_filename = "Data/kilobot_simulation_data_pandas.csv"
+csv_filename = "Data/kilobot_simulation_data_pandas_long_detect.csv"
 kilobot_df = pd.read_csv(csv_filename)
 heat_map()
 align_corr_timeseries()
 orient_order_timeseries()
 theta_histogram()
+kilobot_neighbor_timeseries(5)
 plt.show()
