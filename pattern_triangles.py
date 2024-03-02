@@ -1,8 +1,8 @@
 from PIL import Image, ImageDraw
 
 # Parameters
-name = "test"
-scale = 100  # Scale of the pattern
+name = "triangles"
+scale = 50  # Scale of the pattern
 num_triangles = 7
 tri_colors_top = ["#00eaff", "#ff00ff", "#0024ff", "#ff0000", "#00ff00", "#fcff00", "#fcff00"]
 tri_colors_bottom = ["#ff0000", "#00ff00", "#fcff00", "#00eaff", "#ff00ff", "#0024ff", "#0024ff"]
@@ -11,7 +11,7 @@ tri_colors_bottom = ["#ff0000", "#00ff00", "#fcff00", "#00eaff", "#ff00ff", "#00
 
 circle_color = "white"
 outline_color = "white"
-width, height = 600, 600
+width, height = 1000, 1000
 
 # Create a base pattern image
 base_pattern_size = scale

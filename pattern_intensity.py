@@ -5,6 +5,7 @@ W, H = 1000, 1000  # Size of the pattern
 L = 25  # Size of each square
 num_hor = W // L
 num_vert = H // L
+name = "intensity"
 
 # Create a new image with RGBA mode to support opacity
 background = Image.new('RGB', (W, H), (255, 255, 255)) 
@@ -29,5 +30,5 @@ for i in range(num_vert):
         draw.rectangle([top_left, bottom_right], fill=color)
 
 # Save the image
-name = "intensity"
 background.save(f'Patterns/pattern_{name}.png')
+background.save(f'Patterns/pattern_{name}.pdf')
