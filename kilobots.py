@@ -1,6 +1,6 @@
 import random
 import math
-from headings import HEADINGS_MAP
+import json
 from scipy.stats import bernoulli
 from enum import Enum
 
@@ -17,16 +17,16 @@ class Color(Enum):
     WHITE = (255, 255, 255, 255)
     
     
-WIDTH, HEIGHT = 1000, 800      # Domain size (1 pixel correspond to 10mm)
-FPS = 60                       # Simulation FPS     
+WIDTH, HEIGHT = 800, 800      # Domain size (1 pixel correspond to 10mm)
+FPS = 30                       # Simulation FPS     
 SCALE = 8                      # Scales the Kilobots to user preference (1 represents real size compared to domain)
-SPEED = 0.1 * SCALE          
+SPEED = 1 / FPS * SCALE          
 RADIUS = 1.3 * SCALE         
 DETECT_RADIUS = 10 * SCALE     # Kilobot neighborhood detection radius
-TUMBLE_RATE = 5000             # Tumble probability rate 
+TUMBLE_RATE = 50000             # Tumble probability rate 
 TUMBLE_DELAY = 500             # Time (ms) to complete tumbling action
 ADJUST_DELAY = 500             # Time (ms) to complete adjusting action
-ADJUST_TICK = 1000             # Time (ms) between neighbor detection
+ADJUST_TICK = 2500             # Time (ms) between neighbor detection
 STATES = {
     "RUNNING"  : Color.BLACK.value,
     "TUMBLING" : Color.RED.value,
@@ -44,6 +44,8 @@ ENUM_COLOR = {
     "GREY": 8
 }
 
+with open('Data/heading_dict.json', 'r') as f:
+    HEADINGS_MAP = json.load(f)
 
 class Kilobot():
     
@@ -75,11 +77,12 @@ class Kilobot():
         self.trail = []
         self.detected_color = ()
         self.sequence = []
-        self.est_heading = 0
+        self.est_heading = math.nan
         self.intensity_read = 0
-        self.intense_read_time = 0
+        self.intense_read_time_x = 0
+        self.intense_read_time_y = 0
         self.x_vel, self.y_vel = 0, 0
-        self.heading_error = 0
+        self.heading_error = math.nan
         
         
     
@@ -90,8 +93,6 @@ class Kilobot():
             self.handle_tumble()
         elif self.adjusting:
             self.handle_adjusting()
-        elif self.colliding:            # Currently not being used
-            self.handle_collision()
         else:
             self.handle_run()
         
@@ -124,7 +125,10 @@ class Kilobot():
             if count > 1:
                 avg_sin_theta /= alignment*(count + 1)
                 avg_cos_theta /= alignment*(count + 1)
-                self.theta = math.atan2(avg_sin_theta, avg_cos_theta)  
+                new_theta = math.atan2(avg_sin_theta, avg_cos_theta)
+                if new_theta < 0:
+                    new_theta += 2*math.pi
+                self.theta = new_theta
                 self.adjusting = True
                 self.step_since_adjust = 0
                 self.detection = Color.BLUE.value
@@ -135,21 +139,6 @@ class Kilobot():
                 self.neighbor_count = 0
         else:      
             self.adjust_tick -= 1
-            
-            
-    def collision(self, collision):
-        """Calculates resultant collision positions and headings - Currently not in use
-
-        Args:
-            collision (Kilobot): Colliding Kilobot object
-        """
-        self.colliding, collision.colliding = True, True
-        self.x -= SPEED * math.cos(self.theta)
-        self.y -= SPEED * math.sin(self.theta)
-        collision.x -= SPEED * math.cos(collision.theta)
-        collision.y -= SPEED * math.sin(collision.theta)
-        self.theta += math.pi
-        collision.theta += math.pi
             
             
     def handle_run(self):   
@@ -188,17 +177,6 @@ class Kilobot():
         if self.step_since_run >= milliseconds_to_frames(ADJUST_DELAY):
             self.adjusting = False
             self.step_since_run = 0        
-        
-        
-    def handle_collision(self):
-        """Handles collision logic - Currently not in use
-        """
-        self.step_since_colliding += 1
-        self.adjust_tick = milliseconds_to_frames(500)
-        self.status = STATES["COLLISION"]
-        if self.step_since_colliding == milliseconds_to_frames(500):
-            self.colliding = False
-            self.step_since_colliding = 0
         
     
     def tumble_probability(self):
@@ -259,46 +237,53 @@ class Kilobot():
         
         R, G, B, _ = reading
         
-        if G == 0 and B == 0:
-            return Color.RED
-        elif B == 0 and R == 0:
-            return Color.GREEN
-        else: 
-            return Color.WHITE     
+        if R == 0 and G == 0:
+            return Color.BLUE
+        elif B == 0:
+            return Color.YELLOW
+        else:
+            return Color.WHITE    
              
                   
-    def intensity_heading(self, prev_reading, prev_time, square_length):
+    def intensity_heading(self, prev_reading, prev_time_x, prev_time_y, square_length):
         
         prev_color = self.evaluate_color(prev_reading)
         cur_color = self.evaluate_color(self.intensity_read)
         
         if prev_color != cur_color:
-            diff_time = self.intense_time_read - prev_time
+            
+            diff_time_x = frames_to_milliseconds(self.intense_time_read_x - prev_time_x)
             
             sequence = [prev_color, cur_color]
             
             if sequence == [Color.RED, Color.GREEN] or sequence == [Color.GREEN, Color.WHITE] or sequence == [Color.WHITE, Color.RED]:
-                self.x_vel = square_length / diff_time
+                self.x_vel = square_length / diff_time_x
             else:
-                self.x_vel = -square_length / diff_time
+                self.x_vel = -square_length / diff_time_x
                 
         else:
             if prev_reading != self.intensity_read:
                 
-                diff_time = self.intense_time_read - prev_time
+                diff_time_y = frames_to_milliseconds(self.intense_time_read_y - prev_time_y)
                 
                 if sum(self.intensity_read) > sum(prev_reading):
-                    self.y_vel = -square_length / diff_time
+                    self.y_vel = -square_length / diff_time_y
                 else:
-                    self.y_vel = square_length / diff_time
-                
-        heading = math.atan2(self.y_vel, self.x_vel)   
+                    self.y_vel = square_length / diff_time_y
         
-        if heading < 0:
-            heading += 2*math.pi
-              
+        if self.x_vel == 0 and self.y_vel == 0:
+            heading = math.nan
+        else:      
+            heading = math.atan2(self.y_vel, self.x_vel)
+            
+            if heading < 0:
+                heading += 2*math.pi   
+                  
         self.est_heading = heading
-        self.heading_error = abs((self.theta - self.est_heading + math.pi) % (2 * math.pi) - math.pi)
+        if self.est_heading != math.nan:
+            self.heading_error = abs((self.theta - self.est_heading + math.pi) % (2 * math.pi) - math.pi)
+        else:
+            self.heading_error = math.nan
                                        
                                                    
     def centre_of_mass(self, kilobots):

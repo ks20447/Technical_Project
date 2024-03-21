@@ -5,11 +5,10 @@
 #include <stdbool.h>
 
 // Info: clock ticks approx 32 times per second, or once every 30ms.
-#define DETECT_RADIUS 100  // Xmm neighbourhood detection radius
-#define MAX_NEIGHBORS 20  // Maximum number of detectable nighbours used to initialise arrays
-#define SQUARE_LENGTH 100 // Lenght of grid squares in mm
-#define TIME_FULL_TURN 10000 // Time taken in ms to do a full rotation
-#define TUMBLE_RATE 20000 //
+#define DETECT_RADIUS 100    // mm neighbourhood detection radius
+#define MAX_NEIGHBORS 20     // Maximum number of detectable nighbours used to initialise arrays
+#define TIME_FULL_TURN 11000 // Time taken in ms to do a full rotation
+#define TUMBLE_RATE 20000    //
 
 typedef enum states
 {
@@ -17,16 +16,7 @@ typedef enum states
     STATE_RUN = 1,
     STATE_TUMBLE = 2,
     STATE_ADJUST = 3,
-    STATE_TEST = -1
 } state_t;
-
-typedef enum colors
-{
-    NONE = 0,
-    BLUE = 1,
-    YELLOW = 2,
-    WHITE = 3
-} colors_t;
 
 typedef enum motions
 {
@@ -43,69 +33,17 @@ int neighbors[MAX_NEIGHBORS];
 int num_iteration;
 int state;
 int initialised;
-long cur_light;
-long prev_light;
-float x_vel;
-float y_vel;
 float kilo_heading;
 float neighbor_heading;
 float neighbor_headings[MAX_NEIGHBORS];
-float sum_neighbors;
+float sum_sin;
+float sum_cos;
 uint8_t cur_distance;
-uint32_t ticks_prev_x;
-uint32_t ticks_prev_y;
 uint32_t ticks_neighbour_reset;
 uint32_t ticks_adjust;
-
-colors_t cur_color;
-colors_t prev_color;
 motion_t current_motion;
 message_t message;
 distance_measurement_t dist;
-
-void sample_light()
-{
-    int numsamples = 0;
-    long average = 0;
-
-    while (numsamples < 500)
-    {
-        int sample = get_ambientlight();
-        if (sample != -1)
-        {
-            average += sample;
-            numsamples++;
-        }
-    }
-
-    cur_light = average / numsamples;
-}
-
-// void evaluate_color()
-// {
-//     int bound_low = 600, bound_high = 850;
-//
-//     if (cur_light >= 0 && cur_light < bound_low)
-//     {
-//         cur_color = BLUE;
-//         set_color(RGB(0, 0, 2));
-//     }
-//     else if (cur_light >= bound_low && cur_light < bound_high)
-//     {
-//         cur_color = YELLOW;
-//         set_color(RGB(2, 2, 0));
-//     }
-//     else if (cur_light >= bound_high)
-//     {
-//         cur_color = WHITE;
-//         set_color(RGB(2, 2, 2));
-//     }
-//     else
-//     {
-//         cur_color = NONE;
-//         set_color(RGB(0, 0, 0));
-//     }
-// }
 
 void set_motion(motion_t new_motion)
 {
@@ -146,8 +84,6 @@ void reset_timers()
 
     ticks_neighbour_reset = kilo_ticks;
     ticks_adjust = kilo_ticks;
-    ticks_prev_x = kilo_ticks;
-    ticks_prev_y = kilo_ticks;
 }
 
 void set_zero(int arr[MAX_NEIGHBORS])
@@ -157,7 +93,9 @@ void set_zero(int arr[MAX_NEIGHBORS])
         arr[i] = 0;
         neighbor_headings[i] = 0;
     }
-    sum_neighbors = 0;
+
+    sum_sin = 0;
+    sum_cos = 0;
     neighbor_count = 0;
 }
 
@@ -169,7 +107,8 @@ void num_neighbors(int arr[MAX_NEIGHBORS])
         if (arr[i] != 0)
         {
             neighbor_count++;
-            sum_neighbors += neighbor_headings[i];
+            sum_sin += sin(neighbor_headings[i]);
+            sum_cos += cos(neighbor_headings[i]);
         }
     }
 }
@@ -245,16 +184,14 @@ void tumble()
         kilo_heading += (random_tumble / TIME_FULL_TURN) * 2 * M_PI;
     }
 
-
-    if (kilo_heading > 2 * M_PI) {
+    if (kilo_heading > 2 * M_PI)
+    {
         kilo_heading -= 2 * M_PI;
     }
     else if (kilo_heading < 0)
     {
         kilo_heading += 2 * M_PI;
     }
-    
-
 }
 
 void init()
@@ -279,11 +216,8 @@ void init()
     new_message = 0;
     neighbor_id = 0;
     neighbor_count = 0;
-    cur_light = 0;
-    prev_light = 0;
-    x_vel = 0;
-    y_vel = 0;
-    sum_neighbors = 0;
+    sum_sin = 0;
+    sum_cos = 0;
 
     initialised = 1;
     reset_timers();
@@ -293,18 +227,22 @@ void adjust()
 {
 
     set_color(RGB(0, 2, 0));
-    float new_heading = kilo_heading + sum_neighbors;
-    new_heading /= neighbor_count + 1;
-    new_heading *= -1;
 
-    if (new_heading != 0)
+    float avg_sin = sin(kilo_heading) + sum_sin;
+    avg_sin /= neighbor_count + 1;
+
+    float avg_cos = cos(kilo_heading) + sum_cos;
+    avg_cos /= neighbor_count + 1;
+
+    float new_heading = atan2(-avg_sin, -avg_cos);
+
+    if (new_heading < 0)
     {
         new_heading += 2 * M_PI;
     }
 
     float diff_heading = kilo_heading - new_heading;
     int turn_time = (abs(diff_heading) / (2 * M_PI)) * TIME_FULL_TURN;
-    turn_time += 1000;
 
     if (diff_heading < 0)
     {
@@ -318,7 +256,7 @@ void adjust()
         set_motion(RIGHT);
         delay(turn_time);
     }
-    else 
+    else
     {
 
         set_motion(STOP);
@@ -326,7 +264,6 @@ void adjust()
     }
 
     kilo_heading = new_heading;
-
 }
 
 void update_state()
@@ -363,10 +300,12 @@ void update_state()
             num_iteration = 0;
         }
 
-        sum_neighbors = 0, neighbor_count = 0;
+        neighbor_count = 0;
+        sum_sin = 0;
+        sum_cos = 0;
         num_neighbors(neighbors);
 
-        if (kilo_ticks > ticks_adjust + TICKS_PER_SEC * 4 && neighbor_count > 0)
+        if (kilo_ticks > ticks_adjust + TICKS_PER_SEC * 10 && neighbor_count > 0)
         {
             ticks_adjust = kilo_ticks;
             state = STATE_ADJUST;
@@ -379,87 +318,6 @@ void update_state()
         state = STATE_INIT;
     }
 }
-
-// void testing()
-// {
-//
-//     set_motion(STOP);
-//     delay(15);
-//
-//     prev_color = cur_color;
-//     prev_light = cur_light;
-//
-//     if (kilo_ticks > ticks_neighbour_reset + TICKS_PER_SEC / 2)
-//     {
-//         ticks_neighbour_reset = kilo_ticks;
-//         sample_light();
-//         cur_light *= 10;
-//     }
-//
-//     evaluate_color();
-//
-//     if (prev_color != NONE && cur_color != NONE)
-//     {
-//
-//         if (cur_color != prev_color)
-//         {
-//             uint32_t diff_time_x = kilo_ticks - ticks_prev_x;
-//             ticks_prev_x = kilo_ticks;
-//
-//             if ((prev_color == WHITE && cur_color == BLUE) || (prev_color == BLUE && cur_color == YELLOW) ||
-//                 (prev_color == YELLOW && cur_color == WHITE))
-//             {
-//                 x_vel = SQUARE_LENGTH / (diff_time_x / 32);
-//             }
-//             else
-//             {
-//                 x_vel = -SQUARE_LENGTH / (diff_time_x / 32);
-//             }
-//         }
-//         else
-//         {
-//             uint32_t diff_time_y = kilo_ticks - ticks_prev_y;
-//             ticks_prev_y = kilo_ticks;
-//             if (cur_light - prev_light > 30)
-//             {
-//                 y_vel = SQUARE_LENGTH / (diff_time_y / 32);
-//             }
-//             else if (cur_light - prev_light < -30)
-//             {
-//                 y_vel = -SQUARE_LENGTH / (diff_time_y / 32);
-//             }
-//         }
-//
-//         kilo_heading = atan2(y_vel, x_vel);
-//
-//         if (kilo_heading < 0)
-//         {
-//             kilo_heading += 2 * M_PI;
-//         }
-//     }
-//
-//     if (kilo_heading > 0 && kilo_heading <= (M_PI / 2))
-//     {
-//         set_color(RGB(2, 0, 0));
-//     }
-//     else if (kilo_heading > (M_PI / 2) && kilo_heading <= M_PI)
-//     {
-//         set_color(RGB(0, 2, 0));
-//     }
-//     else if (kilo_heading > M_PI && kilo_heading <= (3 * M_PI / 2))
-//     {
-//         set_color(RGB(0, 0, 2));
-//     }
-//     else if (kilo_heading > (3 * M_PI / 2) && kilo_heading <= (2 * M_PI))
-//     {
-//         set_color(RGB(2, 2, 2));
-//     }
-//     else
-//     {
-//         set_color(RGB(0, 0, 0));
-//     }
-//   
-// }
 
 void setup()
 {

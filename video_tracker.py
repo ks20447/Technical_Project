@@ -9,9 +9,9 @@ cap = cv2.VideoCapture("Videos/run_and_tumble_test.mp4")
 tracker = cv2.TrackerCSRT_create()
 
 # Open CSV files for writing trajectory data
-output_csv_path = 'Data/KB_output_trajectories.csv'
-x_csv_path = 'Data/x.csv'
-y_csv_path = 'Data/y.csv'
+output_csv_path = 'Data/Video/KB_output_trajectories.csv'
+x_csv_path = 'Data/Video/x.csv'
+y_csv_path = 'Data/Video/y.csv'
 
 with open(output_csv_path, 'w', newline='') as csvfile, \
         open(x_csv_path, 'w', newline='') as x_csvfile, \

@@ -68,5 +68,4 @@ for x in range(0, width, base_pattern_size * 3):
 # final_image.show()
 
 # Save the final image
-final_image.save(f'Patterns/pattern_{name}.pdf')
 final_image.save(f'Patterns/pattern_{name}.png')

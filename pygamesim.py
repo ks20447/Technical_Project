@@ -5,9 +5,9 @@ import csv
 from kilobots import *
 
 # Simulation time (ms) (=math.inf for continuous running but no data collection)
-SIM_TIME = 100000
+SIM_TIME = 30000
 # Number of Kilobots to begin simulation with
-NUM_KILOBOTS = 50
+NUM_KILOBOTS = 50 
 # SIM_PARAMS = {0 : {"tumbling" : False, "detecting" : False}, 
 #               1 : {"tumbling" : True, "detecting" : False}, 
 #               2 : {"tumbling" : False, "detecting" : True}, 
@@ -15,8 +15,8 @@ NUM_KILOBOTS = 50
 #               }
 SIM_PARAMS = {0 : {"tumbling" : True, "detecting" : True, "alignment" : -1, "pattern" : 0}}
 NUM_SIMS = len(SIM_PARAMS)
-SIM_NAME = "test"
-SQUARE_LENGTH = 10
+SIM_NAME = "triangle_pattern"
+SQUARE_LENGTH = 50
 
     
 def handle_inputs(event):
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         pygame.display.set_caption("Kilobot Run and Tumble Simulation")
         
         if SIM_PARAMS[sim]["pattern"] == 1:
-            bg = pygame.image.load("Patterns/pattern_very_tiny.png")
+            bg = pygame.image.load("Patterns/pattern_triangles.png")
         elif SIM_PARAMS[sim]["pattern"] == 2:
             bg = pygame.image.load("Patterns/pattern_intensity.png")
         else:
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         font = pygame.font.Font(None, 30)
         text = "SPACE : Pause  T : Tumble  D : Detection  R : Radii  Click : Add Kilobot"
         
-        csv_file_path = f"Data/kilobot_simulation_data_pandas_{SIM_NAME}.csv"
+        csv_file_path = f"Data/Simulation/sim_data_{SIM_NAME}.csv"
         with open(csv_file_path, 'w', newline='') as csvfile:
             
             csv_writer = csv.writer(csvfile)
@@ -140,13 +140,15 @@ if __name__ == "__main__":
                                 prev_reading = 0
                                 if kilobot.intensity_read:
                                     prev_reading = kilobot.intensity_read
-                                    prev_time_step = kilobot.intense_read_time
+                                    prev_time_step_x = kilobot.intense_read_time_x
+                                    prev_time_step_y = kilobot.intense_read_time_y
                                 
                                 kilobot.intensity_read = bg.get_at((int(kilobot.x), int(kilobot.y)))
-                                kilobot.intense_time_read = time_step
+                                kilobot.intense_time_read_x = time_step
+                                kilobot.intense_time_read_y = time_step
                                 
                                 if prev_reading:
-                                    kilobot.intensity_heading(prev_reading, prev_time_step, SQUARE_LENGTH) 
+                                    kilobot.intensity_heading(prev_reading, prev_time_step_x, prev_time_step_y, SQUARE_LENGTH) 
                                 
                             if tumbling:
                                 kilobot.tumble()           
