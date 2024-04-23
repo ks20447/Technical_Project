@@ -22,7 +22,7 @@ https://github.com/ks20447/Technical_Project.git
 
 ### Simulation
 To run the simulation, execute:
-python 
+python pygamesim.py
 
 This will start a simulation based on parameters set in `config.json`.
 
