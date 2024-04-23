@@ -5,22 +5,22 @@ import csv
 from kilobots import *
 
 # Simulation time (ms) (=math.inf for continuous running but no data collection)
-SIM_TIME = 30000
+SIM_TIME = 500000
 # Number of Kilobots to begin simulation with
-NUM_KILOBOTS = 50 
+NUM_KILOBOTS = 25
 # SIM_PARAMS = {0 : {"tumbling" : False, "detecting" : False}, 
 #               1 : {"tumbling" : True, "detecting" : False}, 
 #               2 : {"tumbling" : False, "detecting" : True}, 
 #               3 : {"tumbling" : True, "detecting" : True}
 #               }
-SIM_PARAMS = {0 : {"tumbling" : True, "detecting" : True, "alignment" : -1, "pattern" : 0}}
+SIM_PARAMS = {0 : {"tumbling" : False, "detecting" : True, "alignment" : -1, "pattern" : 0}}
 NUM_SIMS = len(SIM_PARAMS)
-SIM_NAME = "triangle_pattern"
+SIM_NAME = "test"
 SQUARE_LENGTH = 50
 
     
 def handle_inputs(event):
-    global paused, tumbling, detecting, radii
+    global paused, tumbling, detecting, radii, alignment
     
     if event.key == pygame.K_SPACE:
         paused = not paused
@@ -29,7 +29,13 @@ def handle_inputs(event):
     if event.key == pygame.K_d:
         detecting = not detecting
     if event.key == pygame.K_r:
-        radii = not radii  
+        radii = not radii 
+    if event.key == pygame.K_0:
+        alignment = 0 
+    if event.key == pygame.K_1:
+        alignment = 1
+    if event.key == pygame.K_2:
+        alignment = -1
         
         
 if __name__ == "__main__": 
@@ -43,6 +49,8 @@ if __name__ == "__main__":
             bg = pygame.image.load("Patterns/pattern_triangles.png")
         elif SIM_PARAMS[sim]["pattern"] == 2:
             bg = pygame.image.load("Patterns/pattern_intensity.png")
+        elif SIM_PARAMS[sim]["pattern"] == 3:
+            bg = pygame.image.load("Patterns/map/sim map.png")
         else:
             grid_size = 50
 
@@ -53,7 +61,7 @@ if __name__ == "__main__":
         com_x, com_y = 0, 0
         
         simulating = True
-        paused = False
+        paused = True
         tumbling = SIM_PARAMS[sim]["tumbling"]
         detecting = SIM_PARAMS[sim]["detecting"]
         alignment = SIM_PARAMS[sim]["alignment"]
@@ -68,7 +76,6 @@ if __name__ == "__main__":
                 kilobots.append(kilobot)
         
         font = pygame.font.Font(None, 30)
-        text = "SPACE : Pause  T : Tumble  D : Detection  R : Radii  Click : Add Kilobot"
         
         csv_file_path = f"Data/Simulation/sim_data_{SIM_NAME}.csv"
         with open(csv_file_path, 'w', newline='') as csvfile:
@@ -77,12 +84,13 @@ if __name__ == "__main__":
             csv_writer.writerow(['TimeStep', 'KilobotID', 'X', 'Y', 'Theta', 'Neighbors', 'CoMX', 'CoMY', 'EstimateHeading', 'EstimateError']) 
 
             while simulating:
+                
+                text = f"SPACE : Pause  T : Tumble  D : Detection  R : Radii [0, 1, 2] : Alignment ({alignment}) Click : Add Kilobot"
 
                 if pattern:
                     screen.blit(bg, (0, 0))
                 else:
                     screen.fill(Color.WHITE.value)
-                    
                 
                 if SIM_TIME != math.inf:
                     if time_step == milliseconds_to_frames(SIM_TIME):
@@ -94,7 +102,7 @@ if __name__ == "__main__":
                     elif event.type == pygame.MOUSEBUTTONDOWN:
                         mouse_x, mouse_y = pygame.mouse.get_pos()
                         added_kilobots += 1
-                        kilobots.append(Kilobot(click_place=(mouse_x, mouse_y, added_kilobots*math.pi/2)))
+                        kilobots.append(Kilobot(click_place=(mouse_x, mouse_y, -math.pi/4)))
                     elif event.type == pygame.KEYDOWN:
                         handle_inputs(event)                                         
                     
@@ -154,7 +162,10 @@ if __name__ == "__main__":
                                 kilobot.tumble()           
                         
                         pygame.draw.circle(screen, kilobot.status, (kilobot.x, kilobot.y), RADIUS)
-                        pygame.draw.circle(screen, Color.GREY.value, (com_x, com_y), RADIUS/2)
+                        #  pygame.draw.circle(screen, Color.GREY.value, (com_x, com_y), RADIUS/2)
+                        
+                        # pygame.draw.circle(screen, Color.RED.value, (600, 400), 300, 3)
+                        # pygame.draw.rect(screen, Color.RED.value, (200, 200, 400, 400), width=5)
                         
                         if radii:
                             pygame.draw.circle(screen, kilobot.detection, (kilobot.x, kilobot.y), DETECT_RADIUS, 2)

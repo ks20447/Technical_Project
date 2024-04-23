@@ -18,15 +18,17 @@ class Color(Enum):
     
     
 WIDTH, HEIGHT = 800, 800      # Domain size (1 pixel correspond to 10mm)
-FPS = 30                       # Simulation FPS     
-SCALE = 8                      # Scales the Kilobots to user preference (1 represents real size compared to domain)
+FPS = 60                       # Simulation FPS     
+SCALE = 10                      # Scales the Kilobots to user preference (1 represents real size compared to domain)
 SPEED = 1 / FPS * SCALE          
-RADIUS = 1.3 * SCALE         
-DETECT_RADIUS = 10 * SCALE     # Kilobot neighborhood detection radius
+RADIUS = 1.3 * (SCALE)         
+DETECT_RADIUS = 10 * (SCALE)    # Kilobot neighborhood detection radius
 TUMBLE_RATE = 50000             # Tumble probability rate 
 TUMBLE_DELAY = 500             # Time (ms) to complete tumbling action
 ADJUST_DELAY = 500             # Time (ms) to complete adjusting action
-ADJUST_TICK = 2500             # Time (ms) between neighbor detection
+ADJUST_TICK = 1500             # Time (ms) between neighbor detection
+DELAY_BOUND = 0
+SPAWN_BL, SPAWN_BR, SPAWN_TL, SPAWN_TR = (WIDTH / 4, 3 * WIDTH / 4, HEIGHT / 4, 3 * HEIGHT / 4)
 STATES = {
     "RUNNING"  : Color.BLACK.value,
     "TUMBLING" : Color.RED.value,
@@ -60,8 +62,8 @@ class Kilobot():
         if click_place:
             self.x, self.y, self.theta = click_place
         else:
-            self.x = random.uniform(WIDTH / 4, 3 * WIDTH / 4)
-            self.y = random.uniform(HEIGHT / 4, 3 * HEIGHT / 4)
+            self.x = random.uniform(SPAWN_BL, SPAWN_BR)
+            self.y = random.uniform(SPAWN_TL, SPAWN_TR)
             self.theta = random.uniform(0, 2*math.pi)
         self.step_since_run = 0
         self.step_since_tumble = 0
@@ -111,23 +113,28 @@ class Kilobot():
 
         Args:
             kilobots (list): List of all other Kilobots
-        """
+        """  
         avg_sin_theta, avg_cos_theta = 0, 0
         count = 0
         if self.adjust_tick == 0:
             self.adjust_tick = milliseconds_to_frames(ADJUST_TICK)
             for kilobot in kilobots:
                 if self.distance_from_neighbor(kilobot) < DETECT_RADIUS:
-                    avg_sin_theta += math.sin(kilobot.theta)
-                    avg_cos_theta += math.cos(kilobot.theta)
-                    # avg_theta += kilobot.theta
+                    if alignment:
+                        avg_sin_theta += math.sin(kilobot.theta)
+                        avg_cos_theta += math.cos(kilobot.theta)
                     count += 1
             if count > 1:
-                avg_sin_theta /= alignment*(count + 1)
-                avg_cos_theta /= alignment*(count + 1)
-                new_theta = math.atan2(avg_sin_theta, avg_cos_theta)
-                if new_theta < 0:
-                    new_theta += 2*math.pi
+                if alignment:
+                    avg_sin_theta /= alignment*(count + 1)
+                    avg_cos_theta /= alignment*(count + 1)
+                    avg_sin_theta = round(avg_sin_theta, 5)
+                    avg_cos_theta = round(avg_cos_theta, 5)
+                    new_theta = math.atan2(avg_sin_theta, avg_cos_theta)
+                    if new_theta < 0:
+                        new_theta += 2*math.pi
+                else:
+                    new_theta = self.theta
                 self.theta = new_theta
                 self.adjusting = True
                 self.step_since_adjust = 0
@@ -147,8 +154,8 @@ class Kilobot():
         self.x += SPEED * math.cos(self.theta)
         self.y += SPEED * math.sin(self.theta)
         # Periodic boundary conditions
-        self.x %= WIDTH
-        self.y %= HEIGHT
+        # self.x %= WIDTH
+        # self.y %= HEIGHT
         self.step_since_tumble += 1
         self.status = STATES["RUNNING"]
         self.trail.append(tuple([self.x, self.y]))
@@ -164,7 +171,8 @@ class Kilobot():
         """
         self.step_since_run += 1
         self.status = STATES["TUMBLING"]
-        if self.step_since_run >= milliseconds_to_frames(TUMBLE_DELAY):
+        delay = TUMBLE_DELAY + random.uniform(-DELAY_BOUND, DELAY_BOUND)
+        if self.step_since_run >= milliseconds_to_frames(delay):
             self.tumbling = False
             self.step_since_run = 0
             
@@ -174,7 +182,8 @@ class Kilobot():
         """
         self.step_since_run += 1
         self.status = STATES["ADJUSTING"]
-        if self.step_since_run >= milliseconds_to_frames(ADJUST_DELAY):
+        delay = ADJUST_DELAY + random.uniform(-DELAY_BOUND, DELAY_BOUND)
+        if self.step_since_run >= milliseconds_to_frames(delay):
             self.adjusting = False
             self.step_since_run = 0        
         

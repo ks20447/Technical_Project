@@ -85,6 +85,51 @@ def heatmap_align_anti(df_align, df_anti):
     plt.savefig("Results/HeatmapAlignAnti")   
 
 
+def heatmap_anti_no(df_anti, df_no):
+    fig, axs = plt.subplots(1, 2, figsize=(14, 10))
+
+    grid_size = 20
+
+    df_anti['GridX'] = (df_anti['X'] // grid_size) * grid_size
+    df_anti['GridY'] = (df_anti['Y'] // grid_size) * grid_size
+
+    df_no['GridX'] = (df_no['X'] // grid_size) * grid_size
+    df_no['GridY'] = (df_no['Y'] // grid_size) * grid_size
+
+    df_anti = df_anti.groupby(['GridY', 'GridX']).size().unstack(fill_value=0)
+    df_no = df_no.groupby(['GridY', 'GridX']).size().unstack(fill_value=0)
+
+    cmap = 'inferno'
+    vmin = 0
+    vmax = np.max(df_anti)
+
+    sns.heatmap(df_anti, cmap=cmap, annot=False,
+                ax=axs[0], cbar=False, vmin=vmin,
+                vmax=vmax)
+    sns.heatmap(df_no, cmap=cmap, annot=False,
+                ax=axs[1], cbar=False, vmin=vmin,
+                vmax=vmax)
+
+    axs[0].set_title(f"Anti-Alignment")
+    axs[0].set_xlabel("Grid X (pixels)")
+    axs[0].set_ylabel("Grid Y (pixels)")
+
+    axs[1].set_title(f"No Alignment")
+    axs[1].set_xlabel("Grid X (pixels)")
+    axs[1].set_ylabel("Grid Y (pixels)")
+
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([]) 
+    cbar = fig.colorbar(sm, ax=axs, orientation='horizontal', aspect=40)
+    cbar.set_label('Count')
+
+    plt.tight_layout()
+    plt.suptitle("Heatmap of Kilobot Co-Ordinates in 20$\\times$20 Grid Squares for Alignment vs Anti-Alignment")
+    plt.subplots_adjust(bottom=0.32, top=0.9)  
+    plt.savefig("Results/HeatmapAntiNo")   
+
+
 def com_align_anti(df_align, df_anti):
     fig, axs = plt.subplots(1, 2, figsize=(14, 6))
 
@@ -333,10 +378,10 @@ def kilobot_neighbor_plot(df, df_name, num_bots):
         bot_neighbor_count = df.loc[df['KilobotID'] == bot_id, 'Neighbors']
         
         # Plot the time series of alignment correlation
-        plt.plot(time, bot_neighbor_count, marker='o', linestyle='-', label=f"ID: {bot_id}")
+        plt.plot(time[1:], bot_neighbor_count[1:], marker='o', linestyle='-', label=f"ID: {bot_id}")
         
-    plt.plot(time, average_neighbor_count, marker='o', linestyle="-", label="Mean Total Count",
-             color="black")
+    plt.plot(time[1:], average_neighbor_count[1:], marker='o', linestyle="-", label="Mean Total Count",
+             color="red")
 
     plt.title(f"Time Series of Kilobot Detected Neighbours ({df_name})")
     plt.xlabel("Time (ms)")
@@ -345,7 +390,38 @@ def kilobot_neighbor_plot(df, df_name, num_bots):
     plt.legend()
     plt.savefig(f"Results/Neighbour{df_name}.png")    
    
-     
+
+def kilobot_two_neighbor_plot(df_data, df_names):
+    
+    fig, axs = plt.subplots(1, 2, figsize=(14, 8))
+    
+    for i, df in enumerate(df_data):
+        average_neighbor_count = df[["TimeStep", "Neighbors"]]
+        average_neighbor_count = average_neighbor_count.groupby('TimeStep')['Neighbors'].mean()
+        time = frames_to_milliseconds(np.array(average_neighbor_count.index, dtype=int))
+        
+        axs[0].plot(time[1:], average_neighbor_count[1:], marker='o', linestyle="-", label=f"{df_names[i]}")
+    
+    for i, df in enumerate(df_data):
+        no_neighbor_count = df[["TimeStep", "Neighbors"]]
+        no_neighbor_count = no_neighbor_count.groupby('TimeStep').agg(zero_count=('Neighbors', lambda x: (x==0).sum()))
+        time = frames_to_milliseconds(np.array(no_neighbor_count.index, dtype=int))
+           
+        axs[1].plot(time[1:], no_neighbor_count[1:], marker='o', linestyle="-", label=f"{df_names[i]}")
+
+    for ax in axs:
+        ax.set_xlabel("Time (ms)")
+        ax.set_ylabel("Count")
+        ax.grid(True)
+        ax.legend()
+
+    axs[0].set_title("Mean Neighbour Count")
+    axs[1].set_title("Zero Neighbour Count")
+    plt.suptitle(f"Time Series of Kilobot Detected Neighbours for Anti-Alignment vs No Alignment")
+    plt.savefig(f"Results/NeighbourPlotTwo.png") 
+    
+    
+         
 # df_one = pd.read_csv("Data\Simulation\sim_data_one_bot.csv")
 
 # one_bot_path(df_one)
@@ -377,4 +453,16 @@ def kilobot_neighbor_plot(df, df_name, num_bots):
 # df_intensity = pd.read_csv("Data\Simulation\sim_data_intensity_pattern.csv")
 
 # sequencing_error_plots(df_triangle, df_intensity)
+
+df_anti = pd.read_csv("Data\Simulation\sim_data_anti-alignment.csv")
+df_no = pd.read_csv("Data\Simulation\sim_data_random_no_boundary.csv")
+df_data = [df_anti, df_no]
+df_names = ["Anti-Alignment", "No Alignment"]
+
+# heatmap_anti_no(df_anti, df_no)
+# kilobot_neighbor_plot(df=df_anti, df_name="Anti-Alignment", num_bots=3)
+# kilobot_neighbor_plot(df=df_no, df_name="No Alignment", num_bots=3)
+
+kilobot_two_neighbor_plot(df_data, df_names)
+
 
