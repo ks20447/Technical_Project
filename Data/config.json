@@ -1,0 +1,25 @@
+{
+    "simulation": {
+        "height": 800,
+        "width": 800,
+        "sim_time": 50000, 
+        "fps": 60,
+        "num_bots": 50,
+        "paused": false,
+        "tumbling": true,
+        "detecting": true,
+        "alignment": -1,
+        "pattern": 0,
+        "name": "test"
+    },
+    "kilobots": {
+        "scale": 8,
+        "speed": 1,
+        "radius": 1.3,
+        "detect_radius": 10,
+        "tumble_rate": 50000,
+        "tumble_delay": 500,
+        "adjust_delay": 500,
+        "adjust_rate": 1500
+    }
+}

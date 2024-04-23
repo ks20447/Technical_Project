@@ -15,20 +15,7 @@ class Color(Enum):
     MAGENTA = (255, 0, 255, 255)          
     GREY = (128, 128, 128, 255)      
     WHITE = (255, 255, 255, 255)
-    
-    
-WIDTH, HEIGHT = 800, 800      # Domain size (1 pixel correspond to 10mm)
-FPS = 60                       # Simulation FPS     
-SCALE = 10                      # Scales the Kilobots to user preference (1 represents real size compared to domain)
-SPEED = 1 / FPS * SCALE          
-RADIUS = 1.3 * (SCALE)         
-DETECT_RADIUS = 10 * (SCALE)    # Kilobot neighborhood detection radius
-TUMBLE_RATE = 50000             # Tumble probability rate 
-TUMBLE_DELAY = 500             # Time (ms) to complete tumbling action
-ADJUST_DELAY = 500             # Time (ms) to complete adjusting action
-ADJUST_TICK = 1500             # Time (ms) between neighbor detection
-DELAY_BOUND = 0
-SPAWN_BL, SPAWN_BR, SPAWN_TL, SPAWN_TR = (WIDTH / 4, 3 * WIDTH / 4, HEIGHT / 4, 3 * HEIGHT / 4)
+
 STATES = {
     "RUNNING"  : Color.BLACK.value,
     "TUMBLING" : Color.RED.value,
@@ -46,8 +33,37 @@ ENUM_COLOR = {
     "GREY": 8
 }
 
-with open('Data/heading_dict.json', 'r') as f:
-    HEADINGS_MAP = json.load(f)
+with open('Data/heading_dict.json', 'r') as f0:
+    HEADINGS_MAP = json.load(f0)
+    
+with open('Data/config.json', 'r') as f1:
+    config = json.load(f1)
+ 
+config_sim = config["simulation"]   
+config_bots = config["kilobots"]
+
+WIDTH, HEIGHT = config_sim["height"], config_sim["width"]   # Domain size (1 pixel correspond to 10mm)
+FPS = config_sim["fps"]                                     # Simulation FPS   
+SIM_TIME = config_sim["sim_time"]                           # Simulation time (ms) (=math.inf for continuous running but no data collection
+NUM_KILOBOTS = config_sim["num_bots"]                       # Number of Kilobots to begin simulation with
+PAUSED = config_sim["paused"]                               # (un)pause simulation
+TUMBLING = config_sim["tumbling"]                           # (de)activate tumbling
+DETECTING = config_sim["detecting"]                         # (de)activate neighbor detection
+ALIGNMENT = config_sim["alignment"]                         # switch alignment (0: none, 1: align, -1:anti-align)
+PATTERN = config_sim["pattern"]                             # switch background pattern (0: default, 1: triangular, 2: intensity)
+NAME = config_sim["name"]                                   # Set data collection file name
+  
+SCALE = config_bots["scale"]                                # Scales the Kilobots to user preference (1 represents real size compared to domain)
+SPEED = config_bots["speed"] / FPS * SCALE          
+RADIUS = config_bots["radius"] * (SCALE)         
+DETECT_RADIUS = config_bots["detect_radius"] * (SCALE)      # Kilobot neighborhood detection radius
+TUMBLE_RATE = config_bots["tumble_rate"]                    # Tumble probability rate 
+TUMBLE_DELAY = config_bots["tumble_delay"]                  # Time (ms) to complete tumbling action
+ADJUST_DELAY = config_bots["adjust_delay"]                  # Time (ms) to complete adjusting action
+ADJUST_TICK = config_bots["adjust_rate"]                    # Time (ms) between neighbor detection
+DELAY_BOUND = 0
+SPAWN_BL, SPAWN_BR, SPAWN_TL, SPAWN_TR = (WIDTH / 4, 3 * WIDTH / 4, HEIGHT / 4, 3 * HEIGHT / 4)     # Starting bounding box
+
 
 class Kilobot():
     
